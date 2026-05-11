@@ -6,30 +6,24 @@
 
 ## Overview
 
-Training foundation models at frontier scale hundreds of billions to trillions of parameters demands a sophisticated understanding of how computation, memory, and communication intersect across hardware hierarchies. This repository documents my deep-dive into the **five fundamental parallelism dimensions** that power modern GPU cluster training.
-
-Each module builds upon the previous, progressing from single-GPU baseline profiling to advanced techniques like Mixture-of-Experts routing and pipeline interleaving. The goal is not just to implement these techniques, but to develop rigorous intuition for *why* they work and *when* to apply them.
+Training foundation models at frontier scale demands a deep understanding of how computation, memory, and communication intersect across hardware hierarchies. This repository documents my deep-dive into the **key parallelism techniques** that power modern GPU cluster training.
 
 ---
 
-## The Five Dimensions of Parallelism
+## Topics Studied
 
-Modern large-scale training systems do not rely on a single parallelism strategy. Instead, they compose multiple techniques to maximize hardware utilization while staying within memory and bandwidth constraints.
-
-### 1. Data Parallelism
-Stateless model replicas with synchronized gradients via all-reduce. Foundational to distributed training; scales throughput linearly with GPU count until communication or I/O becomes bottleneck.
-
-### 2. Tensor Parallelism (Model Parallelism, Fine-Grained)
-Row/column partitioning of linear layers across devices (as in Megatron-LM). Enables fitting models that exceed single-GPU memory but introduces all-reduce within layer forward/backward passes.
-
-### 3. Pipeline Parallelism (Model Parallelism, Coarse-Grained)
-Vertical slicing of transformer layers across stages. Allows inter-stage microbatches to overlap computation and communication, amortizing pipeline bubbles.
-
-### 4. Context Parallelism
-Attention computation sharded along the sequence dimension (e.g., FlashAttention with ring attention). Critical for long-context models where the KV-cache exceeds device memory.
-
-### 5. Expert Parallelism
-Routing mechanism in MoE architectures where experts are partitioned across devices. Combined with data/tensor parallelism to maintain model capacity while scaling parameters.
+| # | Topic | Description |
+|---|-------|-------------|
+| 01 | Training on One GPU | Baseline memory profiling and analysis |
+| 02 | Data Parallelism | Distributed training with gradient synchronization |
+| 03 | Activation & Gradient Recomputation | Memory-compute tradeoffs via checkpointing |
+| 04 | Ring-All-Reduce | Efficient gradient aggregation across GPUs |
+| 05 | ZeRO (Stage 1, 2, 3) | Memory optimization via sharded optimizer states |
+| 06 | Tensor Parallelism | Fine-grained weight matrix partitioning |
+| 07 | Sequence Parallelism | Distributing sequence dimension across GPUs |
+| 08 | Context Parallelism | Long-context attention via sequence sharding |
+| 09 | Pipeline Parallelism | Layer pipelining with 1F1B scheduling |
+| 10 | Expert Parallelism | MoE expert routing across devices |
 
 ---
 
@@ -42,85 +36,70 @@ Routing mechanism in MoE architectures where experts are partitioned across devi
 │   └── Llama_Memory_Track.ipynb
 │
 ├── 02. Data_Parallelism/
-│   └── (Baseline + distributed sampling strategies)
 │
 ├── 03. Activation_Recomputation_Gradient_Recomputation/
 │   ├── Activation_Recomputation.ipynb
 │   ├── ShallowSpeed_GPU_Benchmark.ipynb
 │   └── ShallowSpeed_Advanced_Benchmark.ipynb
 │
-├── 04. Tensor_Parallelism/
-│   └── (Coming soon)
+├── 04. Ring-All-Reduce/
 │
-├── 05. Context_Parallelism/
-│   └── (Coming soon)
+├── 05. ZeRO-1,2,3/
 │
-├── 06. Pipeline_Parallelism/
-│   └── (Coming soon)
+├── 06. Tensor_Parallelism/
 │
-└── 07. Expert_Parallelism/
-    └── (Coming soon)
+├── 07. Sequence_Parallelism/
+│
+├── 08. Context_Parallelism/
+│
+├── 09. Pipeline_Parallelism/
+│
+├── 10. Expert_Parallelism/
+│
+└── README.md
 ```
 
 ---
 
 ## Technical Depth
 
-### Memory Hierarchy Analysis
-Understanding memory footprint is prerequisite to parallelism design. This repo traces:
+### Memory Hierarchy
 - **Parameter memory**: ~2 bytes/parameter (fp16) → ~8 bytes (Adam optimizer state)
 - **Activation memory**: O(batch_size × seq_len × hidden_dim × num_layers)
 - **KV-cache**: O(2 × batch_size × seq_len × num_heads × head_dim) per layer
 
-### Communication Complexity
-Every parallelism strategy introduces communication overhead:
-- Data parallelism: O(gradient_size) per step (all-reduce)
-- Tensor parallelism: O(activation_size) per layer per step (all-reduce)
-- Pipeline parallelism: O(microbatch_size × hidden_dim) for activations/gradients between stages
+### Communication Patterns
+- **Data Parallelism**: All-reduce for synchronized gradients
+- **Ring-All-Reduce**: Reduced bandwidth via ring topology
+- **ZeRO**: Partitioned optimizer states with all-gather
+- **Tensor Parallelism**: All-reduce within layer computation
+- **Pipeline Parallelism**: Point-to-point activations between stages
 
-### Roofline & Hardware Utilization
-Peak FLOPS are rarely achievable due to:
-- Memory bandwidth saturation (especially for large models)
-- Communication-computation overlap limitations
-- Kernel launch overhead in fine-grained parallelism
+### Roofline & Utilization
+Peak FLOPS are rarely achievable due to memory bandwidth saturation, communication-computation overlap limitations, and kernel launch overhead in fine-grained parallelism.
 
 ---
 
 ## About The Ultra-Scale Playbook
 
-**[The Ultra-Scale Playbook: Training LLMs on GPU Clusters](https://www.amazon.com/dp/B0XXXXX)** by Vijay is a practitioner's guide to distributed training infrastructure. Unlike academic papers that present idealized algorithms, the Playbook bridges theory and production systems by:
+**[The Ultra-Scale Playbook: Training LLMs on GPU Clusters](https://www.amazon.com/dp/B0XXXXX)** by Vijay bridges theory and production systems:
 
-- Providing concrete benchmark results on real GPU clusters
-- Discussing failure modes and debugging strategies
-- Covering the systems-level thinking required for cluster-scale training
-- Offering reproducible experimental setups
+- Concrete benchmark results on real GPU clusters
+- Failure modes and debugging strategies
+- Systems-level thinking for cluster-scale training
+- Reproducible experimental setups
 
-This repository serves as my implementation companion — working through the concepts, reproducing benchmarks, and adding my own analysis where the Playbook leaves exercises.
-
-### Key Topics Covered in the Book
-
-| Chapter | Topic | This Repo |
-|---------|-------|-----------|
-| Memory Foundations | Activation/parameter profiling | Module 01 |
-| Data Parallelism | Gradient synchronization, bucketing | Module 02 |
-| Activation Recomputation | Checkpointing strategies | Module 03 |
-| Tensor Parallelism | 3D parallelism composition | Module 04 |
-| Pipeline Parallelism | 1F1B scheduling, bubble minimization | Module 06 |
-| Context Parallelism | Ring attention, sequence sharding | Module 05 |
-| Expert Parallelism | MoE routing, capacity factors | Module 07 |
+This repository serves as my implementation companion — working through concepts, reproducing benchmarks, and adding my own analysis.
 
 ---
 
 ## Why This Matters
 
-Understanding parallelism at this level is critical for:
-
+Critical for:
 - **ML Engineers** building or fine-tuning frontier models
 - **Infrastructure Engineers** optimizing cluster utilization
-- **Researchers** designing new model architectures with deployment constraints
+- **Researchers** designing model architectures with deployment constraints
 - **Students** bridging academic ML and systems knowledge
-
-The gap between "I can train a ResNet on one GPU" and "I understand why pipeline bubbles exist and how to minimize them" is exactly the gap this material targets.
 
 ---
 
@@ -133,14 +112,6 @@ pip install torch torchvision torchaudio
 pip install numpy pandas matplotlib jupyterlab
 ```
 
-Each notebook is self-contained with explicit dependencies.
-
----
-
-## Contributing
-
-This is a personal study repository, but open to corrections and discussions. Open an issue if you spot an error or want to discuss a tradeoff.
-
 ---
 
 ## Resources
@@ -148,4 +119,4 @@ This is a personal study repository, but open to corrections and discussions. Op
 - [Ultra-Scale Playbook on Amazon](https://www.amazon.com/dp/B0XXXXX)
 - [FlashAttention Paper](https://arxiv.org/abs/2205.14135)
 - [Megatron-LM Paper](https://arxiv.org/abs/2104.04473)
-- [DeepSpeed MoE Blog](https://www.microsoft.com/en-us/research/blog/deepspeed-moe/)
+- [DeepSpeed ZeRO Blog](https://www.microsoft.com/en-us/research/blog/deepspeed-extreme-scale-training/)
