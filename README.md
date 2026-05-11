@@ -6,7 +6,7 @@
 
 ## Overview
 
-Training foundation models at frontier scale — hundreds of billions to trillions of parameters — demands a sophisticated understanding of how computation, memory, and communication intersect across hardware hierarchies. This repository documents my deep-dive into the **five fundamental parallelism dimensions** that power modern GPU cluster training.
+Training foundation models at frontier scale hundreds of billions to trillions of parameters demands a sophisticated understanding of how computation, memory, and communication intersect across hardware hierarchies. This repository documents my deep-dive into the **five fundamental parallelism dimensions** that power modern GPU cluster training.
 
 Each module builds upon the previous, progressing from single-GPU baseline profiling to advanced techniques like Mixture-of-Experts routing and pipeline interleaving. The goal is not just to implement these techniques, but to develop rigorous intuition for *why* they work and *when* to apply them.
 
