@@ -80,6 +80,7 @@ Peak FLOPS are rarely achievable due to memory bandwidth saturation, communicati
 
 ---
 
+
 ## About The Ultra-Scale Playbook
 
 **[The Ultra-Scale Playbook: Training LLMs on GPU Clusters](https://www.amazon.com/dp/B0XXXXX)** by Vijay bridges theory and production systems:
