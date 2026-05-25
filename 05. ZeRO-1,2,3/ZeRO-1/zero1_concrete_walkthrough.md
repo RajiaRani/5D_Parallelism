@@ -45,6 +45,7 @@ TOTAL PARAMETERS:                            260
 
 ---
 
+
 ## 3. Concrete Parameter Values (Initialised)
 
 Let's assign actual numbers. We'll show a few key matrices explicitly.
